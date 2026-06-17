@@ -1,30 +1,76 @@
-# Talkeo for Windows
+# Talkeo — Windows
 
-Native Windows implementation of Talkeo. The Windows companion to the [Mac app](https://github.com/talkeo-ai/mac), consuming the [Talkeo backend](https://github.com/talkeo-ai/talkeo).
+Native Windows implementation of Talkeo. Detects text selection system-wide and shows a floating action tooltip near the cursor.
+
+## Prerequisites
+
+- Windows 10 19041+ or Windows 11
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) — verify with `dotnet --version`
+
+## Build
+
+```powershell
+dotnet build src/Talkeo.Windows.csproj
+```
+
+## Run
+
+```powershell
+dotnet run --project src/Talkeo.Windows.csproj
+```
+
+A Talkeo icon appears in the system tray. Select text in any app and release the mouse — the tooltip appears near the cursor.
+
+## Architecture
+
+```
+src/
+├── App.xaml(.cs)              # Entry point + orchestration
+├── NativeMethods.cs           # Shared Win32 P/Invoke helpers
+├── Hooks/
+│   └── MouseHook.cs           # Global WH_MOUSE_LL hook (drag + double-click detection)
+├── Selection/
+│   └── SelectionReader.cs     # UI Automation primary path + Ctrl+C clipboard fallback
+├── UI/
+│   ├── TooltipWindow.xaml     # Floating window layout (chromeless, frosted glass)
+│   └── TooltipWindow.xaml.cs  # Window styling + show/position logic
+└── Tray/
+    └── TrayIcon.cs            # System tray icon with quit menu
+```
+
+## Flow
+
+```
+WH_MOUSE_LL WM_LBUTTONUP (drag or double-click)
+    → 80ms delay
+    → SelectionReader: IUIAutomationTextPattern.GetSelection()
+        → fallback: snapshot clipboard → SendInput(Ctrl+C) → read → restore
+    → DispatcherQueue.TryEnqueue → TooltipWindow.Show(text, cursor)
+```
 
 ## Stack
 
-- **WPF** (Windows Presentation Foundation)
-- **C# / .NET 8+**
-- **UI Automation API** for text selection (Windows equivalent of macOS Accessibility API)
-- **`SetWindowsHookEx`** via P/Invoke for global keyboard/mouse hooks
-- **NotifyIcon** for system tray
+| Technology | Purpose |
+|---|---|
+| WinUI 3 / Windows App SDK 1.6 | Floating tooltip window with acrylic backdrop |
+| FlaUI.UIA3 | UI Automation wrapper for reading selected text |
+| System.Windows.Forms.NotifyIcon | System tray icon |
+| SetWindowsHookEx (P/Invoke) | Global low-level mouse hook |
 
-## Why WPF
+## Known Limitations
 
-- Mature, production-proven framework with extensive ecosystem and documentation.
-- Better control over windowing behavior than WinUI 3 for the floating-tooltip pattern Talkeo uses.
-- Good interop with the rest of the .NET ecosystem (HTTP, JSON, SQLite, etc.).
-- Native enough to match the macOS Swift + AppKit approach in spirit, without raw Win32 / C++ pain.
+- Tooltip does not auto-hide on outside click (close button only) — planned for a future issue
+- Acrylic backdrop requires Windows 10 19041+
+- Rounded corners require Windows 11 (silently no-op on Windows 10)
+- Electron-based apps (Slack, Discord, VS Code) may not expose UI Automation TextPattern; clipboard fallback handles these
 
-## Status
+## Out of Scope (follow-up issues)
 
-Active development. First milestone (skeleton WPF project + text selection detection via UI Automation) in progress. See open issues and PRs for the current state.
+- LLM / TTS provider integration
+- Settings persistence
+- Auto-hide on outside click
+- Replace-in-place via UI Automation write
 
-## License
+## Shared with macOS
 
-MIT. See [LICENSE](./LICENSE).
-
-## Talkeo ecosystem
-
-See the [organization page](https://github.com/talkeo-ai) and the [ROADMAP](https://github.com/talkeo-ai/.github/blob/main/profile/ROADMAP.md) for the full product context.
+**No code is shared across platforms.** Each platform implements the same UX natively. Only API contracts and design tokens in `shared/` are common (planned).
