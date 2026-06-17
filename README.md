@@ -10,7 +10,6 @@ Native Windows implementation of Talkeo. Detects text selection system-wide and 
 ## Build
 
 ```powershell
-cd apps/windows
 dotnet build src/Talkeo.Windows.csproj
 ```
 
