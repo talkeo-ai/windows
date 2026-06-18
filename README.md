@@ -52,10 +52,13 @@ WH_MOUSE_LL WM_LBUTTONUP (drag or double-click)
 
 | Technology | Purpose |
 |---|---|
-| WinUI 3 / Windows App SDK 1.6 | Floating tooltip window with acrylic backdrop |
+| Windows App SDK 1.6 | App host |
+| WPF (chromeless `Window`) | Floating tooltip — transparent, avoids the Win11 compositor border |
 | FlaUI.UIA3 | UI Automation wrapper for reading selected text |
 | System.Windows.Forms.NotifyIcon | System tray icon |
 | SetWindowsHookEx (P/Invoke) | Global low-level mouse hook |
+
+The stack is a hybrid (Windows App SDK host + WPF windows + WinForms tray + FlaUI) — the combination needed to match the Mac floating-tooltip UX.
 
 ## Known Limitations
 
